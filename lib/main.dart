@@ -1,53 +1,78 @@
 import 'package:flutter/material.dart';
-import 'central_page.dart';
-import 'peripheral_page.dart';
+import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'dart:convert';
 
-void main() => runApp(const MyApp());
+void main() {
+  runApp(MyApp());
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: ModeSelectorPage(),
+    return MaterialApp(
+      home: BluetoothPage(),
     );
   }
 }
 
-class ModeSelectorPage extends StatelessWidget {
-  const ModeSelectorPage({super.key});
+class BluetoothPage extends StatefulWidget {
+  @override
+  _BluetoothPageState createState() => _BluetoothPageState();
+}
+
+class _BluetoothPageState extends State<BluetoothPage> {
+  FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
+  List<BluetoothDevice> _devices = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _getDevices();
+  }
+
+  _getDevices() async {
+    try {
+      var pairedDevices = await _bluetooth.getBondedDevices();
+      setState(() {
+        _devices = pairedDevices;
+      });
+    } catch (e) {
+      print("Erro ao buscar dispositivos Bluetooth: $e");
+    }
+  }
+
+  _connectToDevice(BluetoothDevice device) async {
+    try {
+      BluetoothConnection.toAddress(device.address).then((connection) {
+        print('Conectado ao ${device.name}');
+      }).catchError((error) {
+        print('Erro ao conectar: $error');
+      });
+    } catch (e) {
+      print("Erro ao tentar conectar: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Selecione o Modo")),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            ElevatedButton(
-              child: const Text("Modo Scanner (Central)"),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => CentralPage()), // Remover const aqui
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              child: const Text("Modo Anunciante (Periférico)"),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => PeripheralPage()), // Remover const aqui
-                );
-              },
-            ),
-          ],
-        ),
+      appBar: AppBar(
+        title: Text("Dispositivos Bluetooth"),
       ),
+      body: _devices.isEmpty
+          ? Center(child: CircularProgressIndicator()) // Exibe um carregando
+          : ListView.builder(
+              itemCount: _devices.length,
+              itemBuilder: (context, index) {
+                return ListTile(
+                  title: Text(_devices[index].name ?? "Dispositivo desconhecido"),
+                  subtitle: Text(_devices[index].address),
+                  onTap: () {
+                    _connectToDevice(_devices[index]);
+                  },
+                );
+              },
+            ),
     );
   }
 }
