@@ -1,16 +1,15 @@
-# flutter_application_1
+# OmniMesh
 
-A new Flutter project.
+OmniMesh é um software de comunicação local descentralizada para dispositivos Android, projetado para operar sem internet ou infraestrutura externa. Utilizando Bluetooth Mesh e futuramente Wi-Fi Direct, o sistema cria uma malha dinâmica entre dispositivos próximos, permitindo a troca de mensagens, arquivos e dados em tempo real. Com foco em resiliência, privacidade e conectividade em ambientes offline, o OmniMesh oferece uma solução moderna e confiável para comunicação em situações críticas, zonas remotas ou eventos com grande aglomeração.
 
-## Getting Started
+## 🚀 Tecnologias Utilizadas
 
-This project is a starting point for a Flutter application.
+Flutter
 
-A few resources to get you started if this is your first Flutter project:
+Bluetooth Mesh (via plugins compatíveis)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Wi-Fi Direct (em desenvolvimento)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Dart
+
+Android SDK
