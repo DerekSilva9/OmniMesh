@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
   runApp(MyApp());
@@ -10,69 +10,113 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: BluetoothPage(),
+      title: 'Bluetooth Scanner',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+      ),
+      home: BluetoothScanPage(),
     );
   }
 }
 
-class BluetoothPage extends StatefulWidget {
+class BluetoothScanPage extends StatefulWidget {
   @override
-  _BluetoothPageState createState() => _BluetoothPageState();
+  _BluetoothScanPageState createState() => _BluetoothScanPageState();
 }
 
-class _BluetoothPageState extends State<BluetoothPage> {
-  FlutterBluetoothSerial _bluetooth = FlutterBluetoothSerial.instance;
-  List<BluetoothDevice> _devices = [];
+class _BluetoothScanPageState extends State<BluetoothScanPage> {
+  List<BluetoothDiscoveryResult> _devicesList = [];
+  bool _isScanning = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _getDevices();
+  // Função para verificar e pedir permissões
+  Future<void> _checkPermissions() async {
+    // Solicitar permissão para escanear Bluetooth
+    PermissionStatus bluetoothStatus = await Permission.bluetoothScan.request();
+    PermissionStatus locationStatus = await Permission.location.request();
+
+    if (bluetoothStatus.isGranted && locationStatus.isGranted) {
+      _startScan();
+    } else {
+      // Caso as permissões não sejam concedidas, exibe uma mensagem
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Permissões necessárias'),
+            content: Text(
+                'É necessário conceder permissões de Bluetooth e Localização para escanear dispositivos.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('OK'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    }
   }
 
-  _getDevices() async {
-    try {
-      var pairedDevices = await _bluetooth.getBondedDevices();
+  // Iniciar a busca por dispositivos Bluetooth
+  void _startScan() {
+    setState(() {
+      _isScanning = true;
+      _devicesList.clear();
+    });
+
+    FlutterBluetoothSerial.instance.startDiscovery().listen((device) {
       setState(() {
-        _devices = pairedDevices;
+        _devicesList.add(device);
       });
-    } catch (e) {
-      print("Erro ao buscar dispositivos Bluetooth: $e");
-    }
+    }).onDone(() {
+      setState(() {
+        _isScanning = false;
+      });
+    });
   }
 
-  _connectToDevice(BluetoothDevice device) async {
-    try {
-      BluetoothConnection.toAddress(device.address).then((connection) {
-        print('Conectado ao ${device.name}');
-      }).catchError((error) {
-        print('Erro ao conectar: $error');
-      });
-    } catch (e) {
-      print("Erro ao tentar conectar: $e");
+  // Exibir lista de dispositivos encontrados
+  Widget _buildDeviceList() {
+    if (_devicesList.isEmpty) {
+      return Center(child: Text('Nenhum dispositivo encontrado.'));
     }
+
+    return ListView.builder(
+      itemCount: _devicesList.length,
+      itemBuilder: (context, index) {
+        final device = _devicesList[index];
+        return ListTile(
+          title: Text(device.device.name ?? 'Desconhecido'),
+          subtitle: Text(device.device.address),
+          trailing: IconButton(
+            icon: Icon(Icons.bluetooth),
+            onPressed: () {
+              // Aqui você pode adicionar a lógica para conectar ao dispositivo
+            },
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Dispositivos Bluetooth"),
+        title: Text('Scanner Bluetooth'),
       ),
-      body: _devices.isEmpty
-          ? Center(child: CircularProgressIndicator()) // Exibe um carregando
-          : ListView.builder(
-              itemCount: _devices.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  title: Text(_devices[index].name ?? "Dispositivo desconhecido"),
-                  subtitle: Text(_devices[index].address),
-                  onTap: () {
-                    _connectToDevice(_devices[index]);
-                  },
-                );
-              },
-            ),
+      body: Column(
+        children: <Widget>[
+          SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: _isScanning ? null : _checkPermissions,
+            child: Text(_isScanning ? 'Escaneando...' : 'Iniciar Busca'),
+          ),
+          Expanded(child: _buildDeviceList()),
+        ],
+      ),
     );
   }
 }
