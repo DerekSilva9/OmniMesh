@@ -1,120 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'pages/scan_page.dart';
+import 'pages/listener_page.dart';
+import 'pages/chat_page.dart';
+import 'pages/paired_devices_page.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const OmniMeshApp());
 }
 
-class MyApp extends StatelessWidget {
+class OmniMeshApp extends StatelessWidget {
+  const OmniMeshApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Bluetooth Scanner',
+      title: 'OmniMesh',
       theme: ThemeData(
-        primarySwatch: Colors.blue,
+        primarySwatch: Colors.deepPurple,
+        useMaterial3: true,
       ),
-      home: BluetoothScanPage(),
+      home: const HomePage(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class BluetoothScanPage extends StatefulWidget {
+class HomePage extends StatefulWidget {
+  const HomePage({super.key});
+
   @override
-  _BluetoothScanPageState createState() => _BluetoothScanPageState();
+  State<HomePage> createState() => _HomePageState();
 }
 
-class _BluetoothScanPageState extends State<BluetoothScanPage> {
-  List<BluetoothDiscoveryResult> _devicesList = [];
-  bool _isScanning = false;
+class _HomePageState extends State<HomePage> {
+  int _currentIndex = 0;
 
-  // Função para verificar e pedir permissões
-  Future<void> _checkPermissions() async {
-    // Solicitar permissão para escanear Bluetooth
-    PermissionStatus bluetoothStatus = await Permission.bluetoothScan.request();
-    PermissionStatus locationStatus = await Permission.location.request();
+  final List<Widget> _pages = [
+    ScanPage(),
+    ListenerPage(),
+    ChatPage(),
+    PairedDevicesPage(),
+  ];
 
-    if (bluetoothStatus.isGranted && locationStatus.isGranted) {
-      _startScan();
-    } else {
-      // Caso as permissões não sejam concedidas, exibe uma mensagem
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Permissões necessárias'),
-            content: Text(
-                'É necessário conceder permissões de Bluetooth e Localização para escanear dispositivos.'),
-            actions: <Widget>[
-              TextButton(
-                child: Text('OK'),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ],
-          );
-        },
-      );
-    }
-  }
-
-  // Iniciar a busca por dispositivos Bluetooth
-  void _startScan() {
-    setState(() {
-      _isScanning = true;
-      _devicesList.clear();
-    });
-
-    FlutterBluetoothSerial.instance.startDiscovery().listen((device) {
-      setState(() {
-        _devicesList.add(device);
-      });
-    }).onDone(() {
-      setState(() {
-        _isScanning = false;
-      });
-    });
-  }
-
-  // Exibir lista de dispositivos encontrados
-  Widget _buildDeviceList() {
-    if (_devicesList.isEmpty) {
-      return Center(child: Text('Nenhum dispositivo encontrado.'));
-    }
-
-    return ListView.builder(
-      itemCount: _devicesList.length,
-      itemBuilder: (context, index) {
-        final device = _devicesList[index];
-        return ListTile(
-          title: Text(device.device.name ?? 'Desconhecido'),
-          subtitle: Text(device.device.address),
-          trailing: IconButton(
-            icon: Icon(Icons.bluetooth),
-            onPressed: () {
-              // Aqui você pode adicionar a lógica para conectar ao dispositivo
-            },
-          ),
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Scanner Bluetooth'),
+        title: const Text('OmniMesh'),
       ),
-      body: Column(
-        children: <Widget>[
-          SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: _isScanning ? null : _checkPermissions,
-            child: Text(_isScanning ? 'Escaneando...' : 'Iniciar Busca'),
+      body: _pages[_currentIndex],
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (int index) {
+          setState(() {
+            _currentIndex = index;
+          });
+        },
+        selectedItemColor: Colors.deepPurple,
+        unselectedItemColor: Colors.grey,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            label: 'Escanear',
           ),
-          Expanded(child: _buildDeviceList()),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.wifi_tethering),
+            label: 'Aguardar',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.chat),
+            label: 'Chat',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.history),
+            label: 'Pareados',
+          ),
         ],
       ),
     );
