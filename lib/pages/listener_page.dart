@@ -1,6 +1,6 @@
-// listener_page.dart
+import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import 'package:flutter/services.dart';  // Para usar MethodChannel
 
 class ListenerPage extends StatefulWidget {
   @override
@@ -8,27 +8,33 @@ class ListenerPage extends StatefulWidget {
 }
 
 class _ListenerPageState extends State<ListenerPage> {
-  BluetoothConnection? _connection;
+  static const platform = MethodChannel('bluetooth_server');  // Definindo o channel
+  bool _isListening = false;
 
-  @override
-  void initState() {
-    super.initState();
+  Future<void> _startListening() async {
+    setState(() {
+      _isListening = true;
+    });
+
+    try {
+      // Chama o método Kotlin para iniciar o servidor Bluetooth
+      final String result = await platform.invokeMethod('startServer');
+      print(result);
+
+      // Aqui você pode lidar com a resposta, que será a confirmação de conexão.
+      // Depois disso, você pode usar essa resposta para lidar com a comunicação adicional.
+
+    } on PlatformException catch (e) {
+      print("Erro: ${e.message}");
+      setState(() {
+        _isListening = false;
+      });
+    }
   }
 
-  // Função para começar a ouvir conexões Bluetooth
-  Future<void> _startListening() async {
-    // Aqui, você pode tentar escutar uma conexão com Bluetooth
-    FlutterBluetoothSerial.instance.onStateChanged().listen((state) async {
-      if (state == BluetoothState.STATE_ON) {
-        // Iniciar o servidor e esperar por conexões, no caso, utilizar o BluetoothConnection
-        BluetoothConnection.toAddress("00:00:00:00:00:00").then((connection) {
-          setState(() {
-            _connection = connection;
-          });
-          print("Conexão recebida!");
-        });
-      }
-    });
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -39,9 +45,10 @@ class _ListenerPageState extends State<ListenerPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Aguardando conexões...'),
+            Text(_isListening ? 'Escutando conexões...' : 'Pronto para escutar.'),
+            SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _startListening,
+              onPressed: _isListening ? null : _startListening,  // Chama o método para começar a ouvir
               child: Text('Começar a ouvir'),
             ),
           ],
