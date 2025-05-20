@@ -45,7 +45,7 @@ class _ListenerPageState extends State<ListenerPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_isListening ? 'Escutando conexões...' : 'Pronto para escutar.'),
+            Text(_isListening ? 'Aguardando conexões...' : 'Pronto para escutar.'),
             SizedBox(height: 16),
             ElevatedButton(
               onPressed: _isListening ? null : _startListening,  // Chama o método para começar a ouvir
