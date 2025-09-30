@@ -1,62 +1,38 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
+import '../services/bluetooth_manager.dart';
 
 class ChatScreen extends StatefulWidget {
-  final BluetoothDevice device;
-
-  ChatScreen({required this.device});
+  final dynamic device; // Use BluetoothDevice se possível
+  ChatScreen({required this.device, Key? key}) : super(key: key);
 
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  BluetoothConnection? _connection;
   final TextEditingController _messageController = TextEditingController();
-  final List<String> _messages = [];
-  bool _isConnecting = true;
-  bool _isConnected = false;
+  List<String> _messages = [];
+  late BluetoothManager _btManager;
 
   @override
   void initState() {
     super.initState();
-    _connectToDevice();
-  }
+    _btManager = BluetoothManager();
+    _messages = List.from(_btManager.receivedMessages);
 
-  void _connectToDevice() async {
-    try {
-      _connection = await BluetoothConnection.toAddress(widget.device.address);
+    _btManager.connection?.input?.listen((data) {
+      String received = utf8.decode(data);
       setState(() {
-        _isConnecting = false;
-        _isConnected = true;
+        _messages.add('👤 ${received.trim()}');
       });
-      print('Conectado a ${widget.device.name}');
-
-      _connection!.input!.listen((data) {
-        String received = utf8.decode(data);
-        setState(() {
-          _messages.add('👤 ${received.trim()}');
-        });
-      }).onDone(() {
-        print('Desconectado pelo outro dispositivo');
-        setState(() {
-          _isConnected = false;
-        });
-      });
-    } catch (e) {
-      print('Erro na conexão: $e');
-      setState(() {
-        _isConnecting = false;
-      });
-    }
+    });
   }
 
   void _sendMessage() {
     String text = _messageController.text.trim();
-    if (text.isEmpty || _connection == null || !_connection!.isConnected) return;
-
-    _connection!.output.add(utf8.encode(text + "\n"));
+    if (text.isEmpty) return;
+    _btManager.sendMessage(text);
     setState(() {
       _messages.add('📱 Você: $text');
       _messageController.clear();
@@ -64,54 +40,41 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   @override
-  void dispose() {
-    _connection?.dispose();
-    _messageController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.device.name ?? 'Dispositivo'),
-      ),
-      body: _isConnecting
-          ? Center(child: CircularProgressIndicator())
-          : Column(
+      appBar: AppBar(title: Text(widget.device.name ?? 'Dispositivo')),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: _messages.length,
+              itemBuilder:
+                  (context, index) => ListTile(title: Text(_messages[index])),
+            ),
+          ),
+          Divider(height: 1),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
               children: [
                 Expanded(
-                  child: ListView.builder(
-                    padding: EdgeInsets.all(8),
-                    itemCount: _messages.length,
-                    itemBuilder: (context, index) => ListTile(
-                      title: Text(_messages[index]),
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: InputDecoration(
+                      hintText: 'Digite sua mensagem...',
                     ),
                   ),
                 ),
-                Divider(height: 1),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _messageController,
-                          decoration: InputDecoration(
-                            hintText: 'Digite sua mensagem...',
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.send),
-                        onPressed: _sendMessage,
-                        color: Colors.deepPurple,
-                      )
-                    ],
-                  ),
+                IconButton(
+                  icon: Icon(Icons.send),
+                  onPressed: _sendMessage,
+                  color: Colors.deepPurple,
                 ),
               ],
             ),
+          ),
+        ],
+      ),
     );
   }
 }

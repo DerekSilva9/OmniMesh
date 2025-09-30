@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bluetooth_serial/flutter_bluetooth_serial.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../services/bluetooth_manager.dart'; // Adicionado
+import 'chat_screen.dart'; // Importa a tela de chat
 
 class ScanPage extends StatefulWidget {
   @override
@@ -19,13 +21,14 @@ class _ScanPageState extends State<ScanPage> {
 
   // Solicita permissões necessárias para Bluetooth e localização
   Future<void> _requestPermissions() async {
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetooth,
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-      Permission.locationWhenInUse,
-    ].request();
+    Map<Permission, PermissionStatus> statuses =
+        await [
+          Permission.bluetooth,
+          Permission.bluetoothScan,
+          Permission.bluetoothConnect,
+          Permission.location,
+          Permission.locationWhenInUse,
+        ].request();
 
     bool allGranted = statuses.values.every((status) => status.isGranted);
     if (!allGranted) {
@@ -40,17 +43,22 @@ class _ScanPageState extends State<ScanPage> {
       _devicesList.clear();
     });
 
-    FlutterBluetoothSerial.instance.startDiscovery().listen((result) {
-      if (!_devicesList.any((element) => element.device.address == result.device.address)) {
-        setState(() {
-          _devicesList.add(result);
+    FlutterBluetoothSerial.instance
+        .startDiscovery()
+        .listen((result) {
+          if (!_devicesList.any(
+            (element) => element.device.address == result.device.address,
+          )) {
+            setState(() {
+              _devicesList.add(result);
+            });
+          }
+        })
+        .onDone(() {
+          setState(() {
+            _isDiscovering = false;
+          });
         });
-      }
-    }).onDone(() {
-      setState(() {
-        _isDiscovering = false;
-      });
-    });
   }
 
   @override
@@ -61,9 +69,7 @@ class _ScanPageState extends State<ScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("Escaneando Dispositivos"),
-      ),
+      appBar: AppBar(title: Text("Escaneando Dispositivos")),
       body: Column(
         children: [
           if (_isDiscovering)
@@ -74,7 +80,9 @@ class _ScanPageState extends State<ScanPage> {
           SizedBox(height: 20),
           ElevatedButton(
             onPressed: _isDiscovering ? null : startDiscovery,
-            child: Text(_isDiscovering ? "Escaneando..." : "Iniciar Escaneamento"),
+            child: Text(
+              _isDiscovering ? "Escaneando..." : "Iniciar Escaneamento",
+            ),
           ),
           Expanded(
             child: ListView.builder(
@@ -84,13 +92,17 @@ class _ScanPageState extends State<ScanPage> {
                 return ListTile(
                   title: Text(device.name ?? "Desconhecido"),
                   subtitle: Text(device.address),
-                  onTap: () {
-                    BluetoothConnection.toAddress(device.address).then((connection) {
-                      print("Conexão estabelecida com ${device.name}");
-                      // Aqui você pode navegar para a tela de chat, se quiser
-                    }).catchError((e) {
-                      print("Erro ao conectar: $e");
-                    });
+                  onTap: () async {
+                    bool success = await BluetoothManager().connect(device);
+                    if (success) {
+                      print("Conectado com sucesso ao ${device.name}");
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => ChatScreen(device: device)),
+                      );
+                    } else {
+                      print("Falha na conexão");
+                    }
                   },
                 );
               },

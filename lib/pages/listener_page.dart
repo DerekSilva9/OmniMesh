@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';  // Para usar MethodChannel
+import 'package:flutter/services.dart';
+import '../services/bluetooth_manager.dart'; // Adicionado
+import 'chat_screen.dart'; // Importando a tela de chat
 
 class ListenerPage extends StatefulWidget {
   @override
@@ -8,7 +10,9 @@ class ListenerPage extends StatefulWidget {
 }
 
 class _ListenerPageState extends State<ListenerPage> {
-  static const platform = MethodChannel('bluetooth_server');  // Definindo o channel
+  static const platform = MethodChannel(
+    'bluetooth_server',
+  ); // Definindo o channel
   bool _isListening = false;
 
   Future<void> _startListening() async {
@@ -18,12 +22,18 @@ class _ListenerPageState extends State<ListenerPage> {
 
     try {
       // Chama o método Kotlin para iniciar o servidor Bluetooth
-      final String result = await platform.invokeMethod('startServer');
+      final Map result = await platform.invokeMethod('startServer');
       print(result);
 
-      // Aqui você pode lidar com a resposta, que será a confirmação de conexão.
-      // Depois disso, você pode usar essa resposta para lidar com a comunicação adicional.
+      // Supondo que o método nativo retorna um mapa com 'connection' e 'device'
+      final connection = result['connection'];
+      final device = result['device'];
+      BluetoothManager().acceptConnection(connection, device);
 
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ChatScreen(device: device)),
+      ); // Navegando para a tela de chat
     } on PlatformException catch (e) {
       print("Erro: ${e.message}");
       setState(() {
@@ -45,10 +55,15 @@ class _ListenerPageState extends State<ListenerPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(_isListening ? 'Aguardando conexões...' : 'Pronto para escutar.'),
+            Text(
+              _isListening ? 'Aguardando conexões...' : 'Pronto para escutar.',
+            ),
             SizedBox(height: 16),
             ElevatedButton(
-              onPressed: _isListening ? null : _startListening,  // Chama o método para começar a ouvir
+              onPressed:
+                  _isListening
+                      ? null
+                      : _startListening, // Chama o método para começar a ouvir
               child: Text('Começar a ouvir'),
             ),
           ],
