@@ -21,12 +21,7 @@ class _ChatScreenState extends State<ChatScreen> {
     _btManager = BluetoothManager();
     _messages = List.from(_btManager.receivedMessages);
 
-    _btManager.connection?.input?.listen((data) {
-      String received = utf8.decode(data);
-      setState(() {
-        _messages.add('👤 ${received.trim()}');
-      });
-    });
+    // TODO: Adaptar recebimento de mensagens para flutter_blue_plus
   }
 
   void _sendMessage() {
@@ -77,4 +72,11 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
+
+void navigateToChatScreen(BuildContext context, dynamic device) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (context) => ChatScreen(device: device)),
+  );
 }
