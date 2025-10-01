@@ -32,6 +32,7 @@ dependencies:
     sdk: flutter
   flutter_blue_plus: ^1.20.0
   permission_handler: ^12.0.1
+  flutter_launcher_icons: "^0.13.1"
 
 
 
@@ -87,3 +88,12 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+
+# Configuração do flutter_launcher_icons
+flutter_launcher_icons:
+    android: true
+    ios: true
+    image_path: "assets/app_icon.png" # Certifique-se de que este caminho está correto
+    # adaptive_icon_foreground: "assets/app_icon_foreground.png" # Opcional: para ícones adaptativos do Android
+    # adaptive_icon_background: "#FFFFFF" # Opcional: cor de fundo para ícones adaptativos
